@@ -280,13 +280,10 @@ end REPL
 
 open REPL
 
-/-- Get lines from stdin until a blank line is entered. -/
-partial def getLines : IO String := do
+/-- Get a single line from stdin. -/
+def getLines : IO String := do
   let line ← (← IO.getStdin).getLine
-  if line.trim.isEmpty then
-    return line
-  else
-    return line ++ (← getLines)
+  return line.trim
 
 instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   toJson x := match x with
