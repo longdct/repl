@@ -332,6 +332,15 @@ def printFlush [ToString α] (s : α) : IO Unit := do
   out.putStr (toString s)
   out.flush -- Flush the output
 
+/-- Prefix for output to distinguish from input -/
+def outputPrefix : String := "REPL> "
+
+/-- Print JSON response with prefix on a single line -/
+def printResponse {α : Type _} [ToJson α] (res : α) : IO Unit := do
+  let json := (toJson res).compress
+  println! "{outputPrefix}{json}"
+  (← IO.getStdout).flush
+
 /-- Read-eval-print loop for Lean. -/
 unsafe def repl : IO Unit :=
   StateT.run' loop {}
@@ -340,15 +349,15 @@ where loop : M IO Unit := do
   if query = "" then
     return ()
   if query.startsWith "#" || query.startsWith "--" then loop else
-  IO.println <| toString <| ← match ← parse query with
-  | .command r => return toJson (← runCommand r)
-  | .file r => return toJson (← processFile r)
-  | .proofStep r => return toJson (← runProofStep r)
-  | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
-  | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
-  | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
-  | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
-  printFlush "\n" -- easier to parse the output if there are blank lines
+  match ← parse query with
+  | .command r => printResponse (← runCommand r)
+  | .file r => printResponse (← processFile r)
+  | .proofStep r => printResponse (← runProofStep r)
+  | .pickleEnvironment r => printResponse (← pickleCommandSnapshot r)
+  | .unpickleEnvironment r => printResponse (← unpickleCommandSnapshot r)
+  | .pickleProofSnapshot r => printResponse (← pickleProofSnapshot r)
+  | .unpickleProofSnapshot r => printResponse (← unpickleProofSnapshot r)
+  printFlush "\n"
   loop
 
 /-- Main executable function, run as `lake exe repl`. -/
